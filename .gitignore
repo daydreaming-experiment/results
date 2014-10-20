@@ -8,3 +8,8 @@ results-latest.json
 
 # Virtualenv
 .venv
+
+# Other
+*~
+*.pyc
+*.idea/

@@ -1,0 +1,16 @@
+{
+      "device_id": null, 
+      "exp_id": "3ae001dcc2e34a024880f455070a6ebae53cf7f760edd5592a4b7ec4b65d7e49", 
+      "id": "019b23e6afb827a1c2bcc40736aded9b8e214c22e337d8c1bf7853af3c64b481", 
+      "n_results": 0, 
+      "profile_data": {
+        "age": "Under 18", 
+        "appVersionCode": 46, 
+        "appVersionName": "0.24.1+debug", 
+        "education": "School (A-Levels, vocational, or similar)", 
+        "gender": "Female", 
+        "mode": "test", 
+        "parametersVersion": "3-test-19"
+      }, 
+      "vk_pem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeEenUNwlXDVYkJ9ZKDoqnL1NNy55\nzIlxPyMziDe9pO+2QURHl4xMCjM3WtkiQMx614RHKm5GS3Xjy9P2qo12WQ==\n-----END PUBLIC KEY-----\n"
+}
