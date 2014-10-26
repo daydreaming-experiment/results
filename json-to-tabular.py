@@ -5,6 +5,16 @@ import csv
 from datetime import datetime
 
 
+def get_by_field(l, name, value):
+    values = [item.get(name) for item in l]
+    c = values.count(value)
+    if c == 0:
+        raise ValueError("'{}' == {} not found".format(name, value))
+    if c > 1:
+        raise ValueError("'{}' == {} found {} times".format(name, value, c))
+    return l[values.index(value)]
+
+
 def do_profiles():
     with open('profiles-latest.json', 'r') as file_profiles:
         profiles = json.load(file_profiles)['profiles']
@@ -59,7 +69,6 @@ def do_results(good_profiles):
         evening_fields = []
         begin_end_fields = []
         probe_fields = ['probe.selfInitiated',
-                        'probe.thought.focus.absorbedDoing',
                         'probe.thought.focus.focusedDoing',
                         'probe.thought.focus.awareWandering',
                         'probe.thought.surround', 'probe.thought.words',
@@ -96,9 +105,10 @@ def do_results(good_profiles):
             root_values.append(r['profile_id'])
             tipe = rdata['type']
             name = rdata['name']
+            status = rdata['status']
             common_values.append(tipe)
             common_values.append(name)
-            common_values.append(rdata['status'])
+            common_values.append(status)
 
             systemTimestamp = \
                 rdata['pageGroups'][0]['pages'][0]['systemTimestamp']
@@ -117,6 +127,12 @@ def do_results(good_profiles):
             else:
                 common_values.append('')
 
+            if status == 'missedOrDismissedOrIncomplete':
+                writer.writerow(root_values + common_values + morning_values +
+                                evening_values + begin_end_values +
+                                probe_values)
+                continue
+
             if tipe == 'morningQuestionnaire':
                 pass
             else:
@@ -133,7 +149,41 @@ def do_results(good_profiles):
                 begin_end_values = [''] * len(begin_end_fields)
 
             if tipe == 'probe':
-                pass
+                probe_values.append(rdata.get('selfInitiated', ''))
+
+                # Thought answers
+                pThought = get_by_field(rdata['pageGroups'], 'name',
+                                        'thought')['pages'][0]
+                focusAnswers = get_by_field(
+                    pThought['questions'], 'questionName',
+                    'probe.thought.focus')['answer']['sliders']
+                probe_values.append(
+                    focusAnswers['How focused were you '
+                                 'on what you were doing?'])
+                probe_values.append(
+                    focusAnswers['How aware were you of '
+                                 'your mind wandering?'])
+
+                probe_values.append(
+                    get_by_field(pThought['questions'], 'questionName',
+                                 'probe.thought.surround')\
+                    ['answer']['sliders'].values()[0])
+                probe_values.append(
+                    get_by_field(pThought['questions'], 'questionName',
+                                 'probe.thought.words')\
+                    ['answer']['sliders'].values()[0])
+                probe_values.append(
+                    get_by_field(pThought['questions'], 'questionName',
+                                 'probe.thought.visual')\
+                    ['answer']['sliders'].values()[0])
+                probe_values.append(
+                    get_by_field(pThought['questions'], 'questionName',
+                                 'probe.thought.auditory')\
+                    ['answer']['sliders'].values()[0])
+
+                contextPG = get_by_field(rdata['pageGroups'], 'name',
+                                         'context')
+                # TODO: get pages and answers
             else:
                 probe_values = [''] * len(probe_fields)
 
