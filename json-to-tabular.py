@@ -74,6 +74,7 @@ def do_results(good_profiles):
                         'probe.thought.surround', 'probe.thought.words',
                         'probe.thought.visual', 'probe.thought.auditory',
                         'probe.context.location.1', 'probe.context.location.2',
+                        'probe.context.location.3',
                         'probe.context.activity.1', 'probe.context.activity.2',
                         'probe.context.activity.3',
                         'probe.context.noise', 'probe.context.interaction',
@@ -181,9 +182,39 @@ def do_results(good_profiles):
                                  'probe.thought.auditory')\
                     ['answer']['sliders'].values()[0])
 
-                contextPG = get_by_field(rdata['pageGroups'], 'name',
+                # Context answers
+                pgContext = get_by_field(rdata['pageGroups'], 'name',
                                          'context')
-                # TODO: get pages and answers
+                pLocation = get_by_field(pgContext['pages'], 'name',
+                                         'location')
+                for i, c in enumerate(
+                        pLocation['questions'][0]['answer']['choices'][:3]):
+                    probe_values.append(c)
+                for j in range(2 - i):
+                    probe_values.append('')
+
+                pActivity = get_by_field(pgContext['pages'], 'name',
+                                         'activity')
+                for i, c in enumerate(
+                        pActivity['questions'][0]['answer']['choices'][:3]):
+                    probe_values.append(c)
+                for j in range(2 - i):
+                    probe_values.append('')
+
+                pNoise = get_by_field(pgContext['pages'], 'name',
+                                      'noise')
+                probe_values.append(
+                    get_by_field(pNoise['questions'], 'questionName',
+                                 'probe.noise')\
+                    ['answer']['sliders'].values()[0])
+                probe_values.append(
+                    get_by_field(pNoise['questions'], 'questionName',
+                                 'probe.interaction')\
+                    ['answer']['sliders'].values()[0])
+                probe_values.append(
+                    get_by_field(pNoise['questions'], 'questionName',
+                                 'probe.people')\
+                    ['answer']['sliders'].values()[0])
             else:
                 probe_values = [''] * len(probe_fields)
 
