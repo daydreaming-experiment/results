@@ -65,9 +65,22 @@ def do_results(good_profiles):
 
         root_fields = ['id', 'profile_id']
         common_fields = ['type', 'name', 'status', 'systemDate', 'ntpDate']
-        morning_fields = []
-        evening_fields = []
+
+        morning_fields = ['morning.selfInitiated',
+                          'morning.sleep',
+                          'morning.dreams',
+                          'morning.valence']
+
+        evening_fields = ['evening.selfInitiated',
+                          'evening.activity.1',
+                          'evening.activity.2',
+                          'evening.activity.3',
+                          'evening.happy',
+                          'evening.mindful']
+
+
         begin_end_fields = []
+
         probe_fields = ['probe.selfInitiated',
                         'probe.thought.focus.focusedDoing',
                         'probe.thought.focus.awareWandering',
@@ -134,15 +147,80 @@ def do_results(good_profiles):
                                 probe_values)
                 continue
 
+            # ---------------------------------------------
+
             if tipe == 'morningQuestionnaire':
-                pass
+                morning_values.append(rdata.get('selfInitiated', ''))
+
+                pMorningUnique= rdata['pageGroups'][0]['pages'][0]
+
+                sleepAnswer = get_by_field(
+                    pMorningUnique['questions'], 'questionName',
+                    'morning.sleep')['answer']['sliders']
+                dreamsAnswer = get_by_field(
+                    pMorningUnique['questions'], 'questionName',
+                    'morning.dreams')['answer']['sliders']
+                valenceAnswer = get_by_field(
+                    pMorningUnique['questions'], 'questionName',
+                    'morning.valence')['answer']['sliders']
+
+                morning_values.append(
+                    dreamsAnswer['How vivid were your dreams?'])
+                morning_values.append(
+                    valenceAnswer['How were your dreams?'])
+                morning_values.append(
+                    sleepAnswer['How long have you slept?'])
+
+
             else:
                 morning_values = [''] * len(morning_fields)
 
+            # ---------------------------------------------
+
             if tipe == 'eveningQuestionnaire':
-                pass
+                evening_values.append(rdata.get('selfInitiated', ''))
+
+
+                pagesEvening = rdata['pageGroups'][0]['pages']
+
+                # --  'evening.activity.manySliders'
+                for pageEvening in pagesEvening:
+                    if pageEvening["name"] == "usualActivities":
+                        questions = pageEvening['questions']
+                        for question in questions:
+                            answer = question["answer"]["sliders"]
+                            for i, c in enumerate(answer.keys()[:3]):
+                                evening_values.append(c)
+                            for j in range(2 - i):
+                                evening_values.append('')
+
+
+                for pageEvening in pagesEvening:
+                    if pageEvening["name"] == "mindfulhappy":
+                        questions = pageEvening['questions']
+
+                # --  'evening.happy'
+                        for question in questions:
+                            print question
+                            if question["questionName"] == 'evening.happy':
+                                answer = question["answer"]["sliders"]
+                                for key in answer.keys():
+                                    evening_values.append(answer[key])
+                                    print key, answer[key]
+
+                # --  'evening.mindful'
+                        for question in questions:
+                            if question["questionName"] == 'evening.mindful':
+                                answer = question["answer"]["sliders"]
+                                for key in answer.keys():
+                                    evening_values.append(answer[key])
+                                    print key, answer[key]
+
+
             else:
                 evening_values = [''] * len(evening_fields)
+
+            # ---------------------------------------------
 
             if tipe == 'beginQuestionnaire' or tipe == 'endQuestionnaire':
                 pass
@@ -222,6 +300,30 @@ def do_results(good_profiles):
                             evening_values + begin_end_values + probe_values)
 
 
+def getQuestionNames(prefixes, grammar):
+
+    assert grammar in ['grammar-v3.1'], 'invalid grammar'
+    if not isinstance(prefixes, list):
+        prefixes = [prefixes]
+
+    names = []
+    path = '../parameters/'+grammar+'/production.json'
+    print "opening:"+path
+    with open('../parameters/'+grammar+'/production.json', 'r') as p:
+        questions = json.load(p)['questions']
+
+    for prefix in prefixes:
+        assert prefix in ['morning', 'evening', 'probe', 'MAAS', 'RR', 'SODAS'], 'invalid prefix {0} for question'.format(prefix)
+
+        for question in questions:
+            prefix_ = question['name'].split('.')[0]
+            if prefix in prefix_:
+                names.append(question['name'])
+    return names
+
+
+
+
 if __name__ == '__main__':
     msg = "Converting profile and result data to tabular csv"
     print '-' * len(msg)
@@ -238,3 +340,6 @@ if __name__ == '__main__':
     print "OK"
     print
     print "All done!"
+
+    for type in ['morning', 'evening', 'probe', ['MAAS', 'RR', 'SODAS']]:
+        print getQuestionNames(type ,'grammar-v3.1')
