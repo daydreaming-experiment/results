@@ -1,5 +1,6 @@
 # Data files from exports
 data/
+fixtures/
 profiles-latest.json
 results-latest.json
 profiles-latest.csv
