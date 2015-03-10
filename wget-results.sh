@@ -13,4 +13,4 @@ echo "## Getting results"
 echo "##"
 echo
 wget --http-user=results --http-password=$1 http://exports.daydreaming-the-app.net/profiles-latest.json
-wget --http-user=results --http-password=$1 http://exports.daydreaming-the-app.net/results-latest.json
+wget --http-user=results --http-password=$1 http://exports.daydreaming-the-app.net/results-latest.zip

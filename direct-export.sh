@@ -14,11 +14,12 @@ echo "## Exporting results"
 FLASK_SECRET_KEY_PROD=xx FLASK_CORS_CLIENT_DOMAIN_PROD=xx python $HOME/yelandur/manage.py -m prod export_results
 
 echo
-echo "## Renaming files"
+echo "## Renaming and zipping files"
 mkdir -p data
-rm -rf data/profiles-latest.json
-rm -rf data/results-latest.json
 mv profiles.json data/profiles-${now}.json
-mv results.json data/results-${now}.json
+zip data/results-${now}.zip results-*.json
+rm -rf results-*.json
+rm -rf data/profiles-latest.json
+rm -rf data/results-latest.zip
 ln -s profiles-${now}.json data/profiles-latest.json
-ln -s results-${now}.json data/results-latest.json
+ln -s results-${now}.zip data/results-latest.zip
