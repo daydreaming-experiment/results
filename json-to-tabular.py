@@ -3,7 +3,8 @@
 import json
 import csv
 from datetime import datetime
-
+import os
+import numpy as np
 
 def get_by_field(l, name, value):
     values = [item.get(name) for item in l]
@@ -54,13 +55,39 @@ def do_profiles():
     return good_profiles
 
 
-def do_results(good_profiles):
+
+def SODAS_score(v):
+    return np.mean(v)
+
+def MAAS_score(v):
+    return 100.-np.mean(v)
+
+def Rumination_score(v_RR):
+    v = [v_ if i+1 not in [6, 9, 10, 13, 14, 17, 20, 24] else 100.-v_\
+         for i,v_ in enumerate(v_RR)  ]
+    return np.mean(v[:13])
+
+def Reflection_score(v_RR):
+    v = [v_ if i+1 not in [6, 9, 10, 13, 14, 17, 20, 24] else 100.-v_\
+         for i,v_ in enumerate(v_RR)  ]
+    return np.mean(v[14:])
+
+
+def do_results_from_json(good_profiles, result_json_file, csv_output='results-latest.csv'):
+
     good_profile_ids = [p['id'] for p in good_profiles]
 
-    with open('results-latest.json', 'r') as file_results:
+    with open(result_json_file, 'r') as file_results:
         results = json.load(file_results)['results']
 
-    with open('results-latest.csv', 'wb') as csv_results:
+
+    if not os.path.exists(csv_output):
+        open(csv_output, 'w')
+        isfirst = True
+    else:
+        isfirst = False
+
+    with open(csv_output, 'a') as csv_results:
         writer = csv.writer(csv_results, delimiter='\t')
 
         root_fields = ['id', 'profile_id']
@@ -79,7 +106,14 @@ def do_results(good_profiles):
                           'evening.mindful']
 
 
-        begin_end_fields = []
+        MAAS_fields = ['MAAS'+str(i) for i in range(1,16)]+['MAAS_score']
+        RR_fields = ['RR'+str(i) for i in range(1,25)]+['Rumination_score','Reflection_score']
+        SODAS_fields = ['SODAS'+str(i) for i in range(1,36)]+['SODAS_score']
+
+
+
+        begin_end_fields = MAAS_fields+RR_fields+SODAS_fields
+
 
         probe_fields = ['probe.selfInitiated',
                         'probe.thought.focus.focusedDoing',
@@ -90,11 +124,15 @@ def do_results(good_profiles):
                         'probe.context.location.3',
                         'probe.context.activity.1', 'probe.context.activity.2',
                         'probe.context.activity.3',
-                        'probe.context.noise', 'probe.context.interaction',
+                        'probe.context.noise.1',
+                        'probe.context.noise.2',
+                        'probe.context.noise.3',
+                        'probe.context.interaction',
                         'probe.context.people']
 
-        writer.writerow(root_fields + common_fields + morning_fields +
-                        evening_fields + begin_end_fields + probe_fields)
+        if isfirst:
+            writer.writerow(root_fields + common_fields + morning_fields +
+                        evening_fields +  probe_fields  + begin_end_fields + begin_end_fields)
 
         for r in results:
             if r['profile_id'] not in good_profile_ids:
@@ -143,8 +181,9 @@ def do_results(good_profiles):
 
             if status == 'missedOrDismissedOrIncomplete':
                 writer.writerow(root_values + common_values + morning_values +
-                                evening_values + begin_end_values +
-                                probe_values)
+                                evening_values + probe_values+
+                                begin_end_values +
+                                begin_end_values )
                 continue
 
             # ---------------------------------------------
@@ -201,12 +240,12 @@ def do_results(good_profiles):
 
                 # --  'evening.happy'
                         for question in questions:
-                            print question
+                            #print question
                             if question["questionName"] == 'evening.happy':
                                 answer = question["answer"]["sliders"]
                                 for key in answer.keys():
                                     evening_values.append(answer[key])
-                                    print key, answer[key]
+                                    #print key, answer[key]
 
                 # --  'evening.mindful'
                         for question in questions:
@@ -214,7 +253,7 @@ def do_results(good_profiles):
                                 answer = question["answer"]["sliders"]
                                 for key in answer.keys():
                                     evening_values.append(answer[key])
-                                    print key, answer[key]
+                                    #print key, answer[key]
 
 
             else:
@@ -222,10 +261,85 @@ def do_results(good_profiles):
 
             # ---------------------------------------------
 
-            if tipe == 'beginQuestionnaire' or tipe == 'endQuestionnaire':
-                pass
+            if tipe == 'beginQuestionnaire':
+                begin_values = []
+                names = ['MAAS','RR','SODAS']
+                fields = [MAAS_fields,RR_fields,SODAS_fields]
+                for name, field in zip(names,fields):
+                    if rdata['name'] == 'begin'+name:
+                        pages = rdata['pageGroups'][0]['pages']
+                        values = []
+                        for page in pages:
+                            questions = page['questions']
+                            for question in questions:
+                                answer = question['answer']['sliders']
+                                q_phrase = answer.keys()[0]
+                                values.append(answer[q_phrase])
+                        begin_values += values
+                        # appending score
+                        if name == 'SODAS':
+                            begin_values.append(SODAS_score(values))
+                        elif name == 'RR':
+                            begin_values+=[Rumination_score(values),Reflection_score(values)]
+                        elif name == 'MAAS':
+                            begin_values.append(MAAS_score(values))
+
+                    else:
+                        begin_values += [''] * len(field)
+
             else:
-                begin_end_values = [''] * len(begin_end_fields)
+                begin_values = [''] * len(begin_end_fields)
+
+
+            if tipe == 'endQuestionnaire':
+                end_values = []
+                names = ['MAAS','RR','SODAS']
+                fields = [MAAS_fields,RR_fields,SODAS_fields]
+                for name, field in zip(names,fields):
+                    if rdata['name'] == 'end'+name:
+                        pages = rdata['pageGroups'][0]['pages']
+                        values = []
+                        for page in pages:
+                            questions = page['questions']
+                            for question in questions:
+                                answer = question['answer']['sliders']
+                                q_phrase = answer.keys()[0]
+                                values.append(answer[q_phrase])
+                        end_values += values
+                                                # appending score
+                        if name == 'SODAS':
+                            end_values.append(SODAS_score(values))
+                        elif name == 'RR':
+                            end_values+=[Rumination_score(values),Reflection_score(values)]
+                        elif name == 'MAAS':
+                            end_values.append(MAAS_score(values))
+
+                    else:
+                        end_values += [''] * len(field)
+
+            else:
+                end_values = [''] * len(begin_end_fields)
+
+
+
+
+                #q_name = rdata['pageGroups'][0]['name']
+
+                #for q_type in ['MAAS','RR','SODAS']:
+                #    pThought = get_by_field(rdata['pageGroups'], 'name',
+                #                        'thought')['pages'][0]
+
+                #    if q_name == q_type:
+                #        pages = rdata['pageGroups'][0]['pages']
+                #        for page in pages:
+                #            questions = page['questions']
+                #            for question in questions:
+                #                answer = question['answer']['sliders']
+                #                q_phrase = answer.keys()[0]
+                #                begin_values.append(answer[q_phrase])
+
+
+            #-------------------------------------------------------
 
             if tipe == 'probe':
                 probe_values.append(rdata.get('selfInitiated', ''))
@@ -236,12 +350,13 @@ def do_results(good_profiles):
                 focusAnswers = get_by_field(
                     pThought['questions'], 'questionName',
                     'probe.thought.focus')['answer']['sliders']
-                probe_values.append(
-                    focusAnswers['How focused were you '
-                                 'on what you were doing?'])
-                probe_values.append(
-                    focusAnswers['How aware were you of '
-                                 'your mind wandering?'])
+
+                s = 'How focused were you on what you were doing?'
+                probe_values.append( focusAnswers[s] if s in focusAnswers else '')
+                s = 'How aware were you of your mind wandering?'
+                probe_values.append( focusAnswers[s] if s in focusAnswers else '')
+
+
 
                 probe_values.append(
                     get_by_field(pThought['questions'], 'questionName',
@@ -281,10 +396,16 @@ def do_results(good_profiles):
 
                 pNoise = get_by_field(pgContext['pages'], 'name',
                                       'noise')
-                probe_values.append(
-                    get_by_field(pNoise['questions'], 'questionName',
-                                 'probe.noise')\
-                    ['answer']['sliders'].values()[0])
+
+                answer = get_by_field(pNoise['questions'], 'questionName', 'probe.noise')['answer']
+                if 'choices' in answer:
+                    for i, c in enumerate(answer['choices'][:3]):
+                        probe_values.append(c)
+                    for j in range(2 - i):
+                        probe_values.append('')
+                else:
+                    probe_values + ['']*3
+
                 probe_values.append(
                     get_by_field(pNoise['questions'], 'questionName',
                                  'probe.interaction')\
@@ -297,7 +418,17 @@ def do_results(good_profiles):
                 probe_values = [''] * len(probe_fields)
 
             writer.writerow(root_values + common_values + morning_values +
-                            evening_values + begin_end_values + probe_values)
+                            evening_values  + probe_values + begin_values + end_values)
+
+
+def do_results(good_profiles, result_json_files=['results_latest.json'], csv_output='results-latest.csv'):
+    assert isinstance(result_json_files, list)
+
+    if os.path.exists(csv_output):
+        os.remove(csv_output)
+
+    for result_json_file in result_json_files:
+        do_results_from_json(good_profiles, result_json_file, csv_output=csv_output)
 
 
 def getQuestionNames(prefixes, grammar):
@@ -322,6 +453,13 @@ def getQuestionNames(prefixes, grammar):
     return names
 
 
+def merge_results_json(json_file_list):
+    assert isinstance(json_file_list,list)
+
+    for file in json_file_list:
+        with open(json_file_list, 'r') as file_results:
+            results = json.load(file_results)['results']
+
 
 
 if __name__ == '__main__':
@@ -336,7 +474,10 @@ if __name__ == '__main__':
     good_profiles = do_profiles()
     print "OK"
     print "Converting results (only for profiles kept at previous step)...",
-    do_results(good_profiles)
+
+
+    result_json_files = ['results-'+str(i)+'.json' for i in range(9)]
+    do_results(good_profiles,result_json_files=result_json_files)
     print "OK"
     print
     print "All done!"
