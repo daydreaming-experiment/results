@@ -426,9 +426,10 @@ def do_results(good_profiles, result_json_files=['results_latest.json'], csv_out
 
     if os.path.exists(csv_output):
         os.remove(csv_output)
-
+        
     for result_json_file in result_json_files:
-        do_results_from_json(good_profiles, result_json_file, csv_output=csv_output)
+        if os.path.exists(result_json_file):
+            do_results_from_json(good_profiles, result_json_file, csv_output=csv_output)
 
 
 def getQuestionNames(prefixes, grammar):
